@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Super Admin - Mon Billet</title>
+  <style>
+    body { font-family: Arial; background:#0b0b0b; color:#fff; padding:20px; }
+    .card { background:#111; padding:12px; margin:8px 0; border-left:4px solid #D4AF37; }
+    button { background:#D4AF37; color:#000; border:none; padding:8px 12px; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <h1>Super Admin - Mon Billet</h1>
+  <p>Téléphone super admin: <strong id="phone"></strong></p>
+  <h2>Codes journaliers</h2>
+  <div id="codes"></div>
+  <button onclick="generate()">Générer maintenant</button>
+  <h2>Billets</h2>
+  <div id="tickets"></div>
+
+  <script>
+    document.getElementById('phone').innerText = '';
+
+    async function loadCodes(){
+      const r = await fetch('/api/daily-codes');
+      const j = await r.json();
+      const el = document.getElementById('codes');
+      el.innerHTML = '';
+      if (j.codes && j.codes.length){
+        j.codes.forEach(c=>{
+          const d = new Date(c.created_at);
+          const div = document.createElement('div');
+          div.className='card';
+          div.innerHTML = '<b>'+c.code+'</b> — '+c.date+' — '+new Date(c.created_at).toLocaleString();
+          el.appendChild(div);
+        });
+      } else el.innerText='Aucun code';
+    }
+
+    async function loadTickets(){
+      const r = await fetch('/api/tickets');
+      const j = await r.json();
+      const el = document.getElementById('tickets');
+      el.innerHTML = '';
+      j.tickets.forEach(t=>{
+        const div = document.createElement('div');
+        div.className='card';
+        div.innerHTML = '<b>'+t.code+'</b> — '+t.type+' — '+t.name+' '+t.surname+' — Active: '+t.active;
+        const btn = document.createElement('button');
+        btn.innerText='Désactiver';
+        btn.onclick = async ()=> {
+          await fetch('/api/deactivate-ticket',{method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({code: t.code})});
+          loadTickets();
+        };
+        div.appendChild(btn);
+        el.appendChild(div);
+      });
+    }
+
+    async function generate(){
+      const r = await fetch('/api/generate-daily-codes',{method:'POST'});
+      const j = await r.json();
+      alert('Codes générés et envoyés: ' + (j.result?.codes||[]).join(','));
+      loadCodes();
+    }
+
+    loadCodes();
+    loadTickets();
+  </script>
+</body>
+</html>
